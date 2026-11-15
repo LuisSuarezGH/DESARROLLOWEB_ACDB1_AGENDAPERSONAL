@@ -1,4 +1,4 @@
-
+# Desarrollo WEB - ACDB1
 # Agenda Personal de Contactos
 
 ## Descripción
@@ -38,7 +38,7 @@ de la información de cada usuario.
 5. Importar el archivo database.sql ubicado en la carpeta config/database.sql
 6. Configurar las credenciales en config/database.php.
 7. Abrir el navegador.
-8. Ingresar a:
+8. Ingresar a(revisar direccion en la cual se descargo la carpeta ACDB1):
 
 http://localhost/ACDB1/
 
