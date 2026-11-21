@@ -204,3 +204,65 @@ th {
         padding: 25px;
     }
 }
+
+/* Filtros y búsqueda de contactos */
+
+.filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 12px;
+    margin: 20px 0;
+    padding: 18px;
+    background: #ffffff;
+    border-radius: 10px;
+}
+
+.filters label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.filters input[type="search"],
+.filters select {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.filters input[type="search"] {
+    min-width: 220px;
+}
+
+.filters input[type="checkbox"] {
+    width: auto;
+}
+
+.filters button,
+.filters a {
+    margin: 0;
+}
+
+/* Categorías y favoritos */
+
+table td {
+    vertical-align: middle;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.actions form {
+    margin: 0;
+}
+
+.actions button,
+.actions a {
+    white-space: nowrap;
+}

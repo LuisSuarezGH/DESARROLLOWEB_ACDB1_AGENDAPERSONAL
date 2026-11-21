@@ -8,6 +8,13 @@ verificarSesion();
 
 $mensaje = "";
 
+// Obtener categorías
+$consulta = $conexion->query(
+    "SELECT id, nombre FROM categorias ORDER BY nombre"
+);
+
+$categorias = $consulta->fetchAll(PDO::FETCH_ASSOC);
+
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
     verificarToken();
@@ -17,6 +24,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $correo = strtolower(trim($_POST['correo'] ?? ''));
     $ciudad = trim($_POST['ciudad'] ?? '');
 
+    $id_categoria = filter_var(
+        $_POST['id_categoria'] ?? '',
+        FILTER_VALIDATE_INT
+    );
+
+    $favorito = isset($_POST['favorito']) ? 1 : 0;
+
+    $categorias_validas = array_map(
+        'intval',
+        array_column($categorias, 'id')
+    );
+
     if (
         $nombre === '' ||
         strlen($nombre) > 120 ||
@@ -24,7 +43,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         !filter_var($correo, FILTER_VALIDATE_EMAIL) ||
         strlen($correo) > 150 ||
         $ciudad === '' ||
-        strlen($ciudad) > 100
+        strlen($ciudad) > 100 ||
+        !$id_categoria ||
+        !in_array($id_categoria, $categorias_validas, true)
     ) {
 
         $mensaje = "Verifica los datos ingresados.";
@@ -33,8 +54,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         $consulta = $conexion->prepare(
             "INSERT INTO contactos
-            (id_usuario, nombre, telefono, correo, ciudad)
-            VALUES (?, ?, ?, ?, ?)"
+            (id_usuario, nombre, telefono, correo, ciudad,
+             id_categoria, favorito)
+            VALUES (?, ?, ?, ?, ?, ?, ?)"
         );
 
         $consulta->execute([
@@ -42,7 +64,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $nombre,
             $telefono,
             $correo,
-            $ciudad
+            $ciudad,
+            $id_categoria,
+            $favorito
         ]);
 
         header("Location: dashboard.php");
@@ -67,7 +91,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <h1>Registrar contacto</h1>
 
     <?php if ($mensaje): ?>
-        <div class="alert error"><?= e($mensaje) ?></div>
+        <div class="alert error">
+            <?= e($mensaje) ?>
+        </div>
     <?php endif; ?>
 
     <form method="POST">
@@ -77,19 +103,46 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         <label>Nombre completo</label>
         <input type="text" name="nombre"
-               maxlength="120" required>
+               maxlength="120" required
+               value="<?= e($_POST['nombre'] ?? '') ?>">
 
         <label>Teléfono</label>
         <input type="tel" name="telefono"
-               maxlength="25" required>
+               maxlength="25" required
+               value="<?= e($_POST['telefono'] ?? '') ?>">
 
         <label>Correo electrónico</label>
         <input type="email" name="correo"
-               maxlength="150" required>
+               maxlength="150" required
+               value="<?= e($_POST['correo'] ?? '') ?>">
 
         <label>Ciudad</label>
         <input type="text" name="ciudad"
-               maxlength="100" required>
+               maxlength="100" required
+               value="<?= e($_POST['ciudad'] ?? '') ?>">
+
+        <label>Categoría</label>
+        <select name="id_categoria" required>
+
+            <option value="">Seleccionar categoría</option>
+
+            <?php foreach ($categorias as $categoria): ?>
+                <option
+                    value="<?= (int)$categoria['id'] ?>"
+                    <?= (($_POST['id_categoria'] ?? '') == $categoria['id'])
+                        ? 'selected' : '' ?>
+                >
+                    <?= e($categoria['nombre']) ?>
+                </option>
+            <?php endforeach; ?>
+
+        </select>
+
+        <label>
+            <input type="checkbox" name="favorito" value="1"
+                <?= isset($_POST['favorito']) ? 'checked' : '' ?>>
+            Marcar como favorito
+        </label>
 
         <button type="submit">Guardar contacto</button>
 

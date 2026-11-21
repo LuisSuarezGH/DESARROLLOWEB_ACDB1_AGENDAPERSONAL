@@ -7,6 +7,7 @@ require_once "includes/auth.php";
 verificarSesion();
 
 $id_usuario = $_SESSION['usuario_id'];
+
 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 
 if (!$id || $id < 1) {
@@ -14,7 +15,14 @@ if (!$id || $id < 1) {
     exit;
 }
 
-// Buscar el contacto y verificar su propietario
+// Obtener categorías
+$consulta = $conexion->query(
+    "SELECT id, nombre FROM categorias ORDER BY nombre"
+);
+
+$categorias = $consulta->fetchAll(PDO::FETCH_ASSOC);
+
+// Buscar contacto y comprobar propietario
 $consulta = $conexion->prepare(
     "SELECT * FROM contactos
      WHERE id = ? AND id_usuario = ?"
@@ -22,7 +30,7 @@ $consulta = $conexion->prepare(
 
 $consulta->execute([$id, $id_usuario]);
 
-$contacto = $consulta->fetch();
+$contacto = $consulta->fetch(PDO::FETCH_ASSOC);
 
 if (!$contacto) {
     http_response_code(404);
@@ -40,6 +48,18 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $correo = strtolower(trim($_POST['correo'] ?? ''));
     $ciudad = trim($_POST['ciudad'] ?? '');
 
+    $id_categoria = filter_var(
+        $_POST['id_categoria'] ?? '',
+        FILTER_VALIDATE_INT
+    );
+
+    $favorito = isset($_POST['favorito']) ? 1 : 0;
+
+    $categorias_validas = array_map(
+        'intval',
+        array_column($categorias, 'id')
+    );
+
     if (
         $nombre === '' ||
         strlen($nombre) > 120 ||
@@ -47,7 +67,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         !filter_var($correo, FILTER_VALIDATE_EMAIL) ||
         strlen($correo) > 150 ||
         $ciudad === '' ||
-        strlen($ciudad) > 100
+        strlen($ciudad) > 100 ||
+        !$id_categoria ||
+        !in_array($id_categoria, $categorias_validas, true)
     ) {
 
         $mensaje = "Verifica los datos ingresados.";
@@ -56,8 +78,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         $consulta = $conexion->prepare(
             "UPDATE contactos
-             SET nombre = ?, telefono = ?,
-                 correo = ?, ciudad = ?
+             SET nombre = ?,
+                 telefono = ?,
+                 correo = ?,
+                 ciudad = ?,
+                 id_categoria = ?,
+                 favorito = ?
              WHERE id = ? AND id_usuario = ?"
         );
 
@@ -66,6 +92,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $telefono,
             $correo,
             $ciudad,
+            $id_categoria,
+            $favorito,
             $id,
             $id_usuario
         ]);
@@ -73,6 +101,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         header("Location: dashboard.php");
         exit;
     }
+
+    // Mantener los datos enviados si hay errores
+    $contacto['nombre'] = $nombre;
+    $contacto['telefono'] = $telefono;
+    $contacto['correo'] = $correo;
+    $contacto['ciudad'] = $ciudad;
+    $contacto['id_categoria'] = $id_categoria;
+    $contacto['favorito'] = $favorito;
 }
 
 ?>
@@ -92,7 +128,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     <h1>Editar contacto</h1>
 
     <?php if ($mensaje): ?>
-        <div class="alert error"><?= e($mensaje) ?></div>
+        <div class="alert error">
+            <?= e($mensaje) ?>
+        </div>
     <?php endif; ?>
 
     <form method="POST">
@@ -119,6 +157,31 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         <input type="text" name="ciudad"
                maxlength="100"
                value="<?= e($contacto['ciudad']) ?>" required>
+
+        <label>Categoría</label>
+        <select name="id_categoria" required>
+
+            <option value="">Seleccionar categoría</option>
+
+            <?php foreach ($categorias as $categoria): ?>
+
+                <option
+                    value="<?= (int)$categoria['id'] ?>"
+                    <?= $contacto['id_categoria'] == $categoria['id']
+                        ? 'selected' : '' ?>
+                >
+                    <?= e($categoria['nombre']) ?>
+                </option>
+
+            <?php endforeach; ?>
+
+        </select>
+
+        <label>
+            <input type="checkbox" name="favorito" value="1"
+                <?= $contacto['favorito'] ? 'checked' : '' ?>>
+            Marcar como favorito
+        </label>
 
         <button type="submit">Actualizar contacto</button>
 
